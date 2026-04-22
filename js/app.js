@@ -12,6 +12,13 @@ let currentState = {
     isPaused: false
 };
 
+// 确保DOM加载完成后再初始化
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+} else {
+    initApp();
+}
+
 // 管理员账号（默认）
 const DEFAULT_ADMIN = {
     username: 'admin',
@@ -71,10 +78,25 @@ function bindTabSwitching() {
 
 // 测试人员开始测试
 function startTest() {
-    const name = document.getElementById('candidate-name').value.trim();
-    const phone = document.getElementById('candidate-phone').value.trim();
-    const school = document.getElementById('candidate-school').value.trim();
-    const major = document.getElementById('candidate-major').value.trim();
+    console.log('startTest被调用');
+    
+    const nameInput = document.getElementById('candidate-name');
+    const phoneInput = document.getElementById('candidate-phone');
+    const schoolInput = document.getElementById('candidate-school');
+    const majorInput = document.getElementById('candidate-major');
+    
+    if (!nameInput || !phoneInput || !schoolInput || !majorInput) {
+        console.error('找不到输入框元素');
+        alert('页面加载错误，请刷新重试');
+        return;
+    }
+    
+    const name = nameInput.value.trim();
+    const phone = phoneInput.value.trim();
+    const school = schoolInput.value.trim();
+    const major = majorInput.value.trim();
+    
+    console.log('输入值:', { name, phone, school, major });
     
     if (!name || !phone || !school || !major) {
         alert('请填写完整信息');
