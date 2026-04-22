@@ -256,6 +256,7 @@
                 <a class="nav-link" onclick="showSection('candidates')">👥 测试人员</a>
                 <a class="nav-link" onclick="showSection('analysis')">📈 潜质分析</a>
                 <a class="nav-link" onclick="showSection('guide')">📝 面试指南</a>
+                <a class="nav-link" onclick="showSection('data')">💾 数据管理</a>
                 <a class="nav-link" onclick="adminLogout()" style="margin-top: 40px;">退出登录</a>
             </div>
             <div class="admin-content">
@@ -831,13 +832,16 @@
 
         // ==================== 管理后台 ====================
         function loadAdminData() {
-            const results = JSON.parse(localStorage.getItem('testResults') || '[]');
+            let results = JSON.parse(localStorage.getItem('testResults') || '[]');
+            
+            // 清理旧数据格式（兼容处理）
+            results = results.filter(r => r.totalScore !== undefined && !isNaN(r.totalScore));
             
             // 统计数据
             document.getElementById('stat-total').textContent = results.length;
             document.getElementById('stat-high').textContent = results.filter(r => r.level === 'high').length;
             document.getElementById('stat-medium').textContent = results.filter(r => r.level === 'medium').length;
-            const avg = results.length ? (results.reduce((a, b) => a + b.totalScore, 0) / results.length).toFixed(1) : 0;
+            const avg = results.length ? (results.reduce((a, b) => a + (parseFloat(b.totalScore) || 0), 0) / results.length).toFixed(1) : '0.0';
             document.getElementById('stat-avg').textContent = avg;
             
             // 最近测试
@@ -853,16 +857,20 @@
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#9ca3af;">暂无数据</td></tr>';
                 return;
             }
-            tbody.innerHTML = results.map(r => `
+            tbody.innerHTML = results.map(r => {
+                const score = parseFloat(r.totalScore) || 0;
+                const level = r.level || 'unknown';
+                const levelText = r.levelText || '未评级';
+                return `
                 <tr>
-                    <td>${r.name}</td>
-                    <td>${r.school}</td>
-                    <td><strong>${r.totalScore}</strong></td>
-                    <td><span class="badge badge-${r.level}">${r.levelText}</span></td>
-                    <td>${new Date(r.time).toLocaleString()}</td>
+                    <td>${r.name || '未知'}</td>
+                    <td>${r.school || '未知'}</td>
+                    <td><strong>${score}</strong></td>
+                    <td><span class="badge badge-${level === 'unknown' ? 'low' : level}">${levelText}</span></td>
+                    <td>${r.time ? new Date(r.time).toLocaleString() : '未知'}</td>
                     <td><button class="btn btn-primary" style="width:auto;padding:6px 12px;font-size:12px;" onclick="viewDetail('${r.phone}')">查看</button></td>
                 </tr>
-            `).join('');
+            `}).join('');
         }
 
         function renderCandidatesList(results) {
@@ -871,23 +879,30 @@
                 tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#9ca3af;">暂无数据</td></tr>';
                 return;
             }
-            tbody.innerHTML = results.map(r => `
+            tbody.innerHTML = results.map(r => {
+                const scores = r.scores || {};
+                const m4Dims = r.m4Dimensions || {};
+                const score = parseFloat(r.totalScore) || 0;
+                const level = r.level || 'unknown';
+                const levelText = r.levelText || '未评级';
+                const hasComment = r.adminComment ? '✓' : '';
+                return `
                 <tr>
-                    <td>${r.name}</td>
-                    <td>${r.school}</td>
-                    <td>${r.major}</td>
-                    <td>${r.scores.m1}/20</td>
-                    <td>${r.scores.m2}/20</td>
-                    <td>${r.scores.m3}/15</td>
-                    <td>${r.m4Dimensions.total}/96</td>
-                    <td><strong>${r.totalScore}</strong></td>
-                    <td><span class="badge badge-${r.level}">${r.levelText}</span></td>
+                    <td>${r.name || '未知'} ${hasComment}</td>
+                    <td>${r.school || '未知'}</td>
+                    <td>${r.major || '未知'}</td>
+                    <td>${scores.m1 || 0}/20</td>
+                    <td>${scores.m2 || 0}/20</td>
+                    <td>${scores.m3 || 0}/15</td>
+                    <td>${m4Dims.total || 0}/96</td>
+                    <td><strong>${score}</strong></td>
+                    <td><span class="badge badge-${level === 'unknown' ? 'low' : level}">${levelText}</span></td>
                     <td>
                         <button class="btn btn-primary" style="width:auto;padding:6px 12px;font-size:12px;margin-right:4px;" onclick="viewDetail('${r.phone}')">详情</button>
                         <button class="btn btn-secondary" style="width:auto;padding:6px 12px;font-size:12px;" onclick="viewPaper('${r.phone}')">考卷</button>
                     </td>
                 </tr>
-            `).join('');
+            `}).join('');
         }
 
         function filterCandidates() {
@@ -972,6 +987,23 @@
                     <div class="profile-title">面试建议</div>
                     <div style="background:#eff6ff;padding:16px;border-radius:8px;line-height:1.8;">
                         ${generateInterviewAdvice(r)}
+                    </div>
+                </div>
+                
+                <div class="profile-section">
+                    <div class="profile-title">管理者评价</div>
+                    <div style="background:#f0fdf4;padding:16px;border-radius:8px;">
+                        <textarea id="admin-comment" style="width:100%;min-height:100px;padding:12px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:12px;" placeholder="请输入您对该候选人的评价、面试记录、录用建议等...">${r.adminComment || ''}</textarea>
+                        <div style="display:flex;gap:12px;">
+                            <select id="admin-decision" style="padding:10px 16px;border:1px solid #d1d5db;border-radius:8px;">
+                                <option value="">选择决策</option>
+                                <option value="hire" ${r.adminDecision === 'hire' ? 'selected' : ''}>✓ 建议录用</option>
+                                <option value="reserve" ${r.adminDecision === 'reserve' ? 'selected' : ''}>○ 待定观察</option>
+                                <option value="reject" ${r.adminDecision === 'reject' ? 'selected' : ''}>✗ 不予录用</option>
+                            </select>
+                            <button class="btn btn-success" style="width:auto;padding:10px 24px;" onclick="saveAdminComment('${r.phone}')">保存评价</button>
+                        </div>
+                        ${r.adminCommentTime ? `<p style="color:#6b7280;font-size:12px;margin-top:8px;">最后更新：${new Date(r.adminCommentTime).toLocaleString()}</p>` : ''}
                     </div>
                 </div>
             `;
@@ -1137,6 +1169,23 @@
             document.getElementById('detail-title').textContent = r.name + ' - 考卷回看';
             document.getElementById('detail-body').innerHTML = html;
             document.getElementById('detail-modal').classList.add('active');
+        }
+
+        function saveAdminComment(phone) {
+            const comment = document.getElementById('admin-comment').value.trim();
+            const decision = document.getElementById('admin-decision').value;
+            
+            let results = JSON.parse(localStorage.getItem('testResults') || '[]');
+            const idx = results.findIndex(r => r.phone === phone);
+            
+            if (idx >= 0) {
+                results[idx].adminComment = comment;
+                results[idx].adminDecision = decision;
+                results[idx].adminCommentTime = new Date().toISOString();
+                localStorage.setItem('testResults', JSON.stringify(results));
+                alert('评价已保存！');
+                renderCandidatesList(results);
+            }
         }
 
         function closeDetail() {
