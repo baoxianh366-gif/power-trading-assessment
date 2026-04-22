@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电力交易潜质人才筛选测评系统</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <!-- 登录页面 -->
+        <div id="login-page" class="page active">
+            <div class="login-container">
+                <div class="logo-section">
+                    <div class="logo">⚡</div>
+                    <h1>电力交易潜质人才筛选测评系统</h1>
+                    <p class="subtitle">Power Trading Potential Assessment System</p>
+                </div>
+                
+                <div class="login-tabs">
+                    <button class="tab-btn active" data-tab="candidate">测试人员登录</button>
+                    <button class="tab-btn" data-tab="admin">管理人员登录</button>
+                </div>
+                
+                <!-- 测试人员登录 -->
+                <div id="candidate-login" class="login-form active">
+                    <div class="form-group">
+                        <label for="candidate-name">姓名</label>
+                        <input type="text" id="candidate-name" placeholder="请输入您的姓名" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="candidate-phone">手机号</label>
+                        <input type="tel" id="candidate-phone" placeholder="请输入您的手机号" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="candidate-school">学校</label>
+                        <input type="text" id="candidate-school" placeholder="请输入您的学校" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="candidate-major">专业</label>
+                        <input type="text" id="candidate-major" placeholder="请输入您的专业" required>
+                    </div>
+                    <button class="btn btn-primary btn-block" onclick="startTest()">开始测试</button>
+                    <p class="hint">首次登录将自动创建账号，同一手机号可继续上次测试</p>
+                </div>
+                
+                <!-- 管理人员登录 -->
+                <div id="admin-login" class="login-form">
+                    <div class="form-group">
+                        <label for="admin-username">用户名</label>
+                        <input type="text" id="admin-username" placeholder="请输入管理员账号" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="admin-password">密码</label>
+                        <input type="password" id="admin-password" placeholder="请输入密码" required>
+                    </div>
+                    <button class="btn btn-primary btn-block" onclick="adminLogin()">登录管理后台</button>
+                    <p class="hint">默认账号: admin / 密码: admin123</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 测试页面 -->
+        <div id="test-page" class="page">
+            <header class="test-header">
+                <div class="header-left">
+                    <span class="logo-small">⚡</span>
+                    <span class="test-title">潜质测评</span>
+                </div>
+                <div class="header-center">
+                    <div class="module-indicator">
+                        <span class="module-dot active" data-module="1"></span>
+                        <span class="module-dot" data-module="2"></span>
+                        <span class="module-dot" data-module="3"></span>
+                        <span class="module-dot" data-module="4"></span>
+                    </div>
+                    <span class="module-name" id="current-module-name">模块一：数理与逻辑敏感度</span>
+                </div>
+                <div class="header-right">
+                    <span class="timer" id="timer">20:00</span>
+                    <button class="btn btn-text" onclick="pauseTest()">暂停</button>
+                </div>
+            </header>
+
+            <main class="test-main">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+
+                <div class="question-container" id="question-container">
+                    <!-- 题目将动态加载 -->
+                </div>
+
+                <div class="test-navigation">
+                    <button class="btn btn-secondary" id="prev-btn" onclick="prevQuestion()" disabled>上一题</button>
+                    <span class="question-counter" id="question-counter">1 / 12</span>
+                    <button class="btn btn-primary" id="next-btn" onclick="nextQuestion()">下一题</button>
+                </div>
+            </main>
+        </div>
+
+        <!-- 测试完成页面 -->
+        <div id="complete-page" class="page">
+            <div class="complete-container">
+                <div class="success-icon">✓</div>
+                <h2>测试已完成！</h2>
+                <p>感谢您完成电力交易潜质人才筛选测评</p>
+                <div class="result-preview">
+                    <div class="score-circle">
+                        <span class="score-value" id="total-score">--</span>
+                        <span class="score-label">总分</span>
+                    </div>
+                </div>
+                <p class="result-message" id="result-message">测试结果已保存，请等待管理人员联系。</p>
+                <button class="btn btn-primary" onclick="backToLogin()">返回首页</button>
+            </div>
+        </div>
+
+        <!-- 管理后台页面 -->
+        <div id="admin-page" class="page">
+            <aside class="admin-sidebar">
+                <div class="admin-logo">
+                    <span>⚡</span>
+                    <span>管理后台</span>
+                </div>
+                <nav class="admin-nav">
+                    <a href="#" class="nav-item active" data-section="dashboard">
+                        <span class="nav-icon">📊</span>
+                        <span>数据概览</span>
+                    </a>
+                    <a href="#" class="nav-item" data-section="candidates">
+                        <span class="nav-icon">👥</span>
+                        <span>测试人员</span>
+                    </a>
+                    <a href="#" class="nav-item" data-section="analysis">
+                        <span class="nav-icon">📈</span>
+                        <span>潜质分析</span>
+                    </a>
+                    <a href="#" class="nav-item" data-section="interview">
+                        <span class="nav-icon">📝</span>
+                        <span>面试指南</span>
+                    </a>
+                    <a href="#" class="nav-item" data-section="settings">
+                        <span class="nav-icon">⚙️</span>
+                        <span>系统设置</span>
+                    </a>
+                </nav>
+                <div class="admin-logout">
+                    <button class="btn btn-text" onclick="adminLogout()">退出登录</button>
+                </div>
+            </aside>
+
+            <main class="admin-main">
+                <!-- 数据概览 -->
+                <section id="dashboard-section" class="admin-section active">
+                    <h2>数据概览</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="total-candidates">0</div>
+                            <div class="stat-label">总测试人数</div>
+                        </div>
+                        <div class="stat-card highlight">
+                            <div class="stat-value" id="high-potential">0</div>
+                            <div class="stat-label">高潜质人才</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="avg-score">0</div>
+                            <div class="stat-label">平均分</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="completion-rate">0%</div>
+                            <div class="stat-label">完成率</div>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <h3>分数分布</h3>
+                        <div class="score-distribution" id="score-distribution">
+                            <!-- 动态生成 -->
+                        </div>
+                    </div>
+
+                    <div class="recent-tests">
+                        <h3>最近测试</h3>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>姓名</th>
+                                    <th>学校</th>
+                                    <th>总分</th>
+                                    <th>评级</th>
+                                    <th>测试时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-tests-body">
+                                <!-- 动态生成 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 测试人员列表 -->
+                <section id="candidates-section" class="admin-section">
+                    <h2>测试人员管理</h2>
+                    <div class="filter-bar">
+                        <input type="text" id="search-candidate" placeholder="搜索姓名或学校...">
+                        <select id="filter-rating">
+                            <option value="">全部评级</option>
+                            <option value="high">高潜质</option>
+                            <option value="medium">可培养</option>
+                            <option value="low">需考察</option>
+                        </select>
+                        <button class="btn btn-secondary" onclick="exportData()">导出数据</button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>姓名</th>
+                                <th>学校</th>
+                                <th>专业</th>
+                                <th>模块一</th>
+                                <th>模块二</th>
+                                <th>模块三</th>
+                                <th>模块四</th>
+                                <th>总分</th>
+                                <th>评级</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="candidates-body">
+                            <!-- 动态生成 -->
+                        </tbody>
+                    </table>
+                </section>
+
+                <!-- 潜质分析 -->
+                <section id="analysis-section" class="admin-section">
+                    <h2>潜质评估分析</h2>
+                    <div class="analysis-container">
+                        <div class="dimension-cards">
+                            <div class="dimension-card">
+                                <h4>数理与逻辑敏感度</h4>
+                                <div class="dimension-desc">考察数字规律、比例直觉、逻辑推理和期望值计算能力</div>
+                                <div class="dimension-stats" id="dimension-1-stats">--</div>
+                            </div>
+                            <div class="dimension-card">
+                                <h4>风险与决策风格</h4>
+                                <div class="dimension-desc">考察损失厌恶、止损判断、连续亏损后决策和信息权重分配</div>
+                                <div class="dimension-stats" id="dimension-2-stats">--</div>
+                            </div>
+                            <div class="dimension-card">
+                                <h4>模式识别与快速学习</h4>
+                                <div class="dimension-desc">考察规则应用、反向规则学习和多因素推理能力</div>
+                                <div class="dimension-stats" id="dimension-3-stats">--</div>
+                            </div>
+                            <div class="dimension-card">
+                                <h4>日常决策偏好</h4>
+                                <div class="dimension-desc">考察风险偏好、时间偏好、分析倾向、学习速度和情绪恢复</div>
+                                <div class="dimension-stats" id="dimension-4-stats">--</div>
+                            </div>
+                        </div>
+
+                        <div class="potential-model">
+                            <h3>电力交易员潜质模型</h3>
+                            <div class="model-grid">
+                                <div class="model-item">
+                                    <span class="model-icon">🔢</span>
+                                    <span class="model-name">数理敏感</span>
+                                    <span class="model-desc">对数字、比例、概率有直觉感知</span>
+                                </div>
+                                <div class="model-item">
+                                    <span class="model-icon">⚖️</span>
+                                    <span class="model-name">风险理性</span>
+                                    <span class="model-desc">客观评估风险收益，不因情绪扭曲决策</span>
+                                </div>
+                                <div class="model-item">
+                                    <span class="model-icon">🎯</span>
+                                    <span class="model-name">模式识别</span>
+                                    <span class="model-desc">从历史数据或规则中快速提取规律</span>
+                                </div>
+                                <div class="model-item">
+                                    <span class="model-icon">📚</span>
+                                    <span class="model-name">学习敏捷</span>
+                                    <span class="model-desc">主动反思、调整策略、从错误中成长</span>
+                                </div>
+                                <div class="model-item">
+                                    <span class="model-icon">🧘</span>
+                                    <span class="model-name">情绪稳定</span>
+                                    <span class="model-desc">压力下保持冷静，不被短期盈亏左右</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 面试指南 -->
+                <section id="interview-section" class="admin-section">
+                    <h2>面试指南</h2>
+                    <div class="interview-guide">
+                        <div class="guide-section">
+                            <h3>🎯 筛选建议</h3>
+                            <div class="guide-content">
+                                <ul>
+                                    <li><strong>量化筛选线：</strong>模块一+二+三满分55分。建议初筛线：35分（约64%正确率）</li>
+                                    <li><strong>高潜质：</strong>得分≥40分，列为高潜人才，优先安排面试</li>
+                                    <li><strong>可培养：</strong>35-39分，具有培养价值，可进入第二轮</li>
+                                    <li><strong>需考察：</strong>低于35分，需结合自评与面试进一步判断</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="guide-section">
+                            <h3>⚠️ 关键题关注</h3>
+                            <div class="guide-content">
+                                <ul>
+                                    <li><strong>第7、8题（止损与连续亏损）：</strong>必须选择理性选项。若选C（补仓或加仓）且理由为"赌一把"，直接降档</li>
+                                    <li><strong>第11题（反向规则）：</strong>完全填对证明快速学习能力，错2个以上则学习敏锐度偏低</li>
+                                    <li><strong>自评交叉验证：</strong>自评总分≥20分且与笔试分数正相关较好。若自评很高但笔试很低，可能存在过度自信</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="guide-section">
+                            <h3>❓ 面试补充问题</h3>
+                            <div class="guide-content">
+                                <p>笔试通过后，面试可做一道简单的动态决策模拟：</p>
+                                <div class="interview-question">
+                                    <p><strong>沉没成本测试：</strong>"假设你花10元买了一张彩票，现在有人愿意12元回收，你会卖吗？为什么？"</p>
+                                    <p class="question-analysis">考察沉没成本与机会成本认知。理性回答应关注当前价值而非已投入成本。</p>
+                                </div>
+                                <div class="interview-question">
+                                    <p><strong>情景模拟：</strong>"现场给一个简单的博弈规则（如'石头剪刀布变种'），让候选人玩2分钟，观察其学习速度和情绪反应。"</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="guide-section">
+                            <h3>📊 交叉验证方法</h3>
+                            <div class="guide-content">
+                                <ul>
+                                    <li>检测无效作答：通过逻辑矛盾题对（如R1与R3）识别随意填写</li>
+                                    <li>揭示隐藏特质：例如自评"风险偏好"高但同时选择"稳赚不赔"，说明可能混淆概念</li>
+                                    <li>与客观题对照：不一致的候选人往往是面试重点对象</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 系统设置 -->
+                <section id="settings-section" class="admin-section">
+                    <h2>系统设置</h2>
+                    <div class="settings-container">
+                        <div class="setting-group">
+                            <h3>阈值设置</h3>
+                            <div class="setting-item">
+                                <label>高潜质分数线</label>
+                                <input type="number" id="high-threshold" value="40" min="0" max="55">
+                            </div>
+                            <div class="setting-item">
+                                <label>可培养分数线</label>
+                                <input type="number" id="medium-threshold" value="35" min="0" max="55">
+                            </div>
+                        </div>
+                        <div class="setting-group">
+                            <h3>数据管理</h3>
+                            <button class="btn btn-danger" onclick="clearAllData()">清空所有数据</button>
+                            <button class="btn btn-secondary" onclick="backupData()">备份数据</button>
+                            <input type="file" id="restore-file" accept=".json" style="display:none">
+                            <button class="btn btn-secondary" onclick="document.getElementById('restore-file').click()">恢复数据</button>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+
+        <!-- 暂停弹窗 -->
+        <div id="pause-modal" class="modal">
+            <div class="modal-content">
+                <h3>测试已暂停</h3>
+                <p>您可以休息片刻，测试进度已保存</p>
+                <button class="btn btn-primary" onclick="resumeTest()">继续测试</button>
+            </div>
+        </div>
+
+        <!-- 候选人详情弹窗 -->
+        <div id="candidate-modal" class="modal">
+            <div class="modal-content large">
+                <div class="modal-header">
+                    <h3 id="modal-candidate-name">候选人详情</h3>
+                    <button class="btn-close" onclick="closeModal()">×</button>
+                </div>
+                <div class="modal-body" id="modal-candidate-content">
+                    <!-- 动态生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/questions.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
