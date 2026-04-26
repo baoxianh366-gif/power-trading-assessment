@@ -345,9 +345,23 @@
         </div>
     </div>
 
+    <!-- 考卷回看弹窗 -->
+    <div id="paper-modal" class="detail-modal">
+        <div class="detail-content" style="max-width: 1000px;">
+            <div class="detail-header">
+                <h3 id="paper-title">考卷回看</h3>
+                <div>
+                    <button class="btn btn-primary" style="width: auto; padding: 8px 16px; margin-right: 8px;" onclick="downloadPaperPDF()">📄 下载PDF</button>
+                    <button class="close-btn" onclick="closePaper()" style="font-size: 28px;">&times;</button>
+                </div>
+            </div>
+            <div class="detail-body" id="paper-body"></div>
+        </div>
+    </div>
+
     <script>
         // ==================== API配置 ====================
-        const API_BASE = 'https://project-uqww9.vercel.app';
+        const API_BASE = 'https://project-uqww9-ewg45inr6-pckylins-projects.vercel.app';
         
         // API状态检查
         async function checkApiStatus() {
@@ -912,8 +926,292 @@
             loadAdminData();
         }
 
-        function viewPaper(phone) {
-            alert('考卷回看功能开发中，将显示每道题的作答情况');
+        let currentPaperData = null;
+
+        async function viewPaper(phone) {
+            // 获取数据
+            let r = null;
+            const apiRes = await apiGet('/api/results/' + phone);
+            if (apiRes && apiRes.success) {
+                r = apiRes.data;
+            } else {
+                const localData = JSON.parse(localStorage.getItem('testResults') || '[]');
+                r = localData.find(x => x.phone === phone);
+            }
+            
+            if (!r) { alert('未找到数据'); return; }
+            
+            currentPaperData = r;
+            
+            // 构建考卷HTML
+            let html = `
+                <div style="margin-bottom: 24px; padding: 16px; background: #f3f4f6; border-radius: 8px;">
+                    <h4 style="margin-bottom: 12px;">考生信息</h4>
+                    <p><strong>姓名：</strong>${r.name || '未知'}</p>
+                    <p><strong>学校/专业：</strong>${r.school || '未知'} / ${r.major || '未知'}</p>
+                    <p><strong>测试时间：</strong>${r.time ? new Date(r.time).toLocaleString() : '未知'}</p>
+                    <p><strong>综合得分：</strong><span style="font-size: 20px; color: #2563eb; font-weight: bold;">${r.totalScore || 0}</span> / 100</p>
+                    <p><strong>评级：</strong><span class="badge badge-${r.level || 'low'}">${r.levelText || '未评级'}</span></p>
+                </div>
+                
+                <div id="paper-content">
+            `;
+            
+            // 模块一：数理逻辑
+            if (r.questionBank && r.questionBank.m1 && r.answers && r.answers.m1) {
+                html += `<div class="paper-section"><h4 style="margin-bottom: 16px; color: #1f2937; border-bottom: 2px solid #3b82f6; padding-bottom: 8px;">模块一：数理逻辑</h4>`;
+                r.questionBank.m1.forEach((q, i) => {
+                    const userAns = r.answers.m1[i];
+                    const isCorrect = userAns === q.correct;
+                    html += `
+                        <div class="paper-question">
+                            <div style="font-weight: 500; margin-bottom: 8px;">${i + 1}. ${q.q}</div>
+                            <div style="margin-left: 16px; color: #6b7280; font-size: 14px;">
+                                ${q.options.map((opt, idx) => {
+                                    let style = '';
+                                    if (idx === q.correct) style = 'color: #059669; font-weight: bold;';
+                                    else if (idx === userAns && !isCorrect) style = 'color: #dc2626; text-decoration: line-through;';
+                                    return `<div style="${style}">${String.fromCharCode(65 + idx)}. ${opt}</div>`;
+                                }).join('')}
+                            </div>
+                            <div style="margin-top: 8px; padding: 8px; border-radius: 4px; ${isCorrect ? 'background: #d1fae5; color: #059669;' : 'background: #fee2e2; color: #dc2626;'}">
+                                <strong>考生答案：</strong>${userAns !== undefined ? String.fromCharCode(65 + userAns) : '未作答'} 
+                                ${isCorrect ? '✓ 正确' : `✗ 错误 (正确答案: ${String.fromCharCode(65 + q.correct)})`}
+                                <span style="float: right;">得分: ${isCorrect ? q.score : 0}/${q.score}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += `<p style="text-align: right; font-weight: bold;">模块得分: ${r.scores?.m1 || 0}/20</p></div>`;
+            }
+            
+            // 模块二：风险决策
+            if (r.questionBank && r.questionBank.m2 && r.answers && r.answers.m2) {
+                html += `<div class="paper-section"><h4 style="margin-bottom: 16px; color: #1f2937; border-bottom: 2px solid #10b981; padding-bottom: 8px;">模块二：风险决策</h4>`;
+                r.questionBank.m2.forEach((q, i) => {
+                    const userAns = r.answers.m2[i];
+                    html += `
+                        <div class="paper-question">
+                            <div style="font-weight: 500; margin-bottom: 8px;">${i + 1}. ${q.q}</div>
+                            <div style="margin-left: 16px; color: #6b7280; font-size: 14px;">
+                                ${q.options.map((opt, idx) => {
+                                    const isSelected = idx === userAns;
+                                    return `<div style="${isSelected ? 'color: #2563eb; font-weight: bold;' : ''}">${String.fromCharCode(65 + idx)}. ${opt}</div>`;
+                                }).join('')}
+                            </div>
+                            <div style="margin-top: 8px; padding: 8px; background: #eff6ff; border-radius: 4px;">
+                                <strong>考生选择：</strong>${userAns !== undefined ? String.fromCharCode(65 + userAns) : '未作答'}
+                                ${q.type ? `<span style="margin-left: 16px; color: #6b7280;">(考察维度: ${q.type})</span>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                html += `<p style="text-align: right; font-weight: bold;">模块得分: ${r.scores?.m2 || 0}/20</p></div>`;
+            }
+            
+            // 模块三：模式识别
+            if (r.questionBank && r.questionBank.m3 && r.answers && r.answers.m3) {
+                html += `<div class="paper-section"><h4 style="margin-bottom: 16px; color: #1f2937; border-bottom: 2px solid #f59e0b; padding-bottom: 8px;">模块三：模式识别</h4>`;
+                r.questionBank.m3.forEach((q, i) => {
+                    const userAns = r.answers.m3[i];
+                    const isCorrect = userAns === q.correct;
+                    html += `
+                        <div class="paper-question">
+                            <div style="font-weight: 500; margin-bottom: 8px;">${i + 1}. ${q.q}</div>
+                            <div style="margin-left: 16px; color: #6b7280; font-size: 14px;">
+                                ${q.options.map((opt, idx) => {
+                                    let style = '';
+                                    if (idx === q.correct) style = 'color: #059669; font-weight: bold;';
+                                    else if (idx === userAns && !isCorrect) style = 'color: #dc2626; text-decoration: line-through;';
+                                    return `<div style="${style}">${String.fromCharCode(65 + idx)}. ${opt}</div>`;
+                                }).join('')}
+                            </div>
+                            <div style="margin-top: 8px; padding: 8px; border-radius: 4px; ${isCorrect ? 'background: #d1fae5; color: #059669;' : 'background: #fee2e2; color: #dc2626;'}">
+                                <strong>考生答案：</strong>${userAns !== undefined ? String.fromCharCode(65 + userAns) : '未作答'} 
+                                ${isCorrect ? '✓ 正确' : `✗ 错误 (正确答案: ${String.fromCharCode(65 + q.correct)})`}
+                                <span style="float: right;">得分: ${isCorrect ? q.score : 0}/${q.score}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += `<p style="text-align: right; font-weight: bold;">模块得分: ${r.scores?.m3 || 0}/15</p></div>`;
+            }
+            
+            // 模块四：日常偏好
+            if (r.answers && r.answers.m4) {
+                html += `<div class="paper-section"><h4 style="margin-bottom: 16px; color: #1f2937; border-bottom: 2px solid #8b5cf6; padding-bottom: 8px;">模块四：日常偏好</h4>`;
+                
+                // 维度得分表
+                const dims = r.m4Dimensions || {};
+                html += `
+                    <div style="margin-bottom: 20px; padding: 12px; background: #f9fafb; border-radius: 8px;">
+                        <h5 style="margin-bottom: 12px;">各维度得分：</h5>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+                            ${Object.keys(dims).filter(k => k !== 'total').map(k => `
+                                <div style="display: flex; justify-content: space-between; padding: 8px; background: white; border-radius: 4px;">
+                                    <span>${k}</span>
+                                    <strong>${dims[k]}</strong>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <p style="text-align: right; margin-top: 12px; font-weight: bold;">模块总分: ${Math.round(dims.total || 0)}/96</p>
+                    </div>
+                `;
+                html += `</div>`;
+            }
+            
+            html += `</div>`;
+            
+            document.getElementById('paper-title').textContent = (r.name || '未知') + ' - 考卷回看';
+            document.getElementById('paper-body').innerHTML = html;
+            document.getElementById('paper-modal').classList.add('active');
+        }
+
+        function closePaper() {
+            document.getElementById('paper-modal').classList.remove('active');
+        }
+
+        function downloadPaperPDF() {
+            if (!currentPaperData) return;
+            
+            const r = currentPaperData;
+            const printWindow = window.open('', '_blank');
+            
+            const html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>${r.name || '未知'} - 测评考卷</title>
+                    <style>
+                        body { font-family: 'Microsoft YaHei', sans-serif; padding: 40px; line-height: 1.6; }
+                        .header { text-align: center; border-bottom: 2px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; }
+                        .header h1 { color: #1f2937; margin-bottom: 10px; }
+                        .info { background: #f3f4f6; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
+                        .info p { margin: 8px 0; }
+                        .module { margin-bottom: 30px; }
+                        .module h2 { color: #1f2937; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; margin-bottom: 20px; }
+                        .question { margin-bottom: 20px; padding: 15px; background: #f9fafb; border-radius: 8px; }
+                        .question-title { font-weight: bold; margin-bottom: 10px; }
+                        .options { margin-left: 20px; color: #4b5563; }
+                        .answer { margin-top: 10px; padding: 10px; border-radius: 4px; }
+                        .correct { background: #d1fae5; color: #059669; }
+                        .wrong { background: #fee2e2; color: #dc2626; }
+                        .selected { font-weight: bold; color: #2563eb; }
+                        .score { text-align: right; font-weight: bold; margin-top: 10px; }
+                        .total { text-align: center; font-size: 24px; margin-top: 30px; padding: 20px; background: #eff6ff; border-radius: 8px; }
+                        @media print { body { padding: 20px; } }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h1>电力交易潜质人才筛选测评 - 考卷</h1>
+                        <p>生成时间：${new Date().toLocaleString()}</p>
+                    </div>
+                    
+                    <div class="info">
+                        <p><strong>考生姓名：</strong>${r.name || '未知'}</p>
+                        <p><strong>学校/专业：</strong>${r.school || '未知'} / ${r.major || '未知'}</p>
+                        <p><strong>测试时间：</strong>${r.time ? new Date(r.time).toLocaleString() : '未知'}</p>
+                        <p><strong>综合得分：</strong><span style="font-size: 20px; color: #2563eb; font-weight: bold;">${r.totalScore || 0}</span> / 100</p>
+                        <p><strong>评级：</strong>${r.levelText || '未评级'}</p>
+                    </div>
+                    
+                    ${r.questionBank && r.questionBank.m1 ? `
+                    <div class="module">
+                        <h2>模块一：数理逻辑（得分：${r.scores?.m1 || 0}/20）</h2>
+                        ${r.questionBank.m1.map((q, i) => {
+                            const userAns = r.answers?.m1?.[i];
+                            const isCorrect = userAns === q.correct;
+                            return `
+                            <div class="question">
+                                <div class="question-title">${i + 1}. ${q.q}</div>
+                                <div class="options">
+                                    ${q.options.map((opt, idx) => {
+                                        let cls = '';
+                                        if (idx === q.correct) cls = 'correct';
+                                        else if (idx === userAns) cls = 'selected';
+                                        return `<div class="${cls}">${String.fromCharCode(65 + idx)}. ${opt}</div>`;
+                                    }).join('')}
+                                </div>
+                                <div class="answer ${isCorrect ? 'correct' : 'wrong'}">
+                                    考生答案：${userAns !== undefined ? String.fromCharCode(65 + userAns) : '未作答'} 
+                                    ${isCorrect ? '✓' : `✗ (正确答案: ${String.fromCharCode(65 + q.correct)})`}
+                                    <span style="float: right;">得分: ${isCorrect ? q.score : 0}/${q.score}</span>
+                                </div>
+                            </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    ` : ''}
+                    
+                    ${r.questionBank && r.questionBank.m2 ? `
+                    <div class="module">
+                        <h2>模块二：风险决策（得分：${r.scores?.m2 || 0}/20）</h2>
+                        ${r.questionBank.m2.map((q, i) => {
+                            const userAns = r.answers?.m2?.[i];
+                            return `
+                            <div class="question">
+                                <div class="question-title">${i + 1}. ${q.q}</div>
+                                <div class="options">
+                                    ${q.options.map((opt, idx) => {
+                                        const cls = idx === userAns ? 'selected' : '';
+                                        return `<div class="${cls}">${String.fromCharCode(65 + idx)}. ${opt}</div>`;
+                                    }).join('')}
+                                </div>
+                                <div class="answer" style="background: #eff6ff;">
+                                    考生选择：${userAns !== undefined ? String.fromCharCode(65 + userAns) : '未作答'}
+                                    ${q.type ? `<span style="margin-left: 20px; color: #6b7280;">(考察维度: ${q.type})</span>` : ''}
+                                </div>
+                            </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    ` : ''}
+                    
+                    ${r.questionBank && r.questionBank.m3 ? `
+                    <div class="module">
+                        <h2>模块三：模式识别（得分：${r.scores?.m3 || 0}/15）</h2>
+                        ${r.questionBank.m3.map((q, i) => {
+                            const userAns = r.answers?.m3?.[i];
+                            const isCorrect = userAns === q.correct;
+                            return `
+                            <div class="question">
+                                <div class="question-title">${i + 1}. ${q.q}</div>
+                                <div class="options">
+                                    ${q.options.map((opt, idx) => {
+                                        let cls = '';
+                                        if (idx === q.correct) cls = 'correct';
+                                        else if (idx === userAns) cls = 'selected';
+                                        return `<div class="${cls}">${String.fromCharCode(65 + idx)}. ${opt}</div>`;
+                                    }).join('')}
+                                </div>
+                                <div class="answer ${isCorrect ? 'correct' : 'wrong'}">
+                                    考生答案：${userAns !== undefined ? String.fromCharCode(65 + userAns) : '未作答'} 
+                                    ${isCorrect ? '✓' : `✗ (正确答案: ${String.fromCharCode(65 + q.correct)})`}
+                                    <span style="float: right;">得分: ${isCorrect ? q.score : 0}/${q.score}</span>
+                                </div>
+                            </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    ` : ''}
+                    
+                    <div class="total">
+                        <p><strong>综合得分：${r.totalScore || 0} / 100</strong></p>
+                        <p>评级：${r.levelText || '未评级'}</p>
+                    </div>
+                </body>
+                </html>
+            `;
+            
+            printWindow.document.write(html);
+            printWindow.document.close();
+            
+            // 自动触发打印
+            setTimeout(() => {
+                printWindow.print();
+            }, 500);
         }
 
         function closeDetail() {
