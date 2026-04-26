@@ -586,7 +586,7 @@
             const savedAns = currentTest.answers['m' + currentTest.module][currentTest.qIndex];
             
             if (currentTest.module === 4) {
-                // 量表题（1-5分）
+                // 量表题（1-5分，存储为1-5）
                 optsDiv.innerHTML = [1, 2, 3, 4, 5].map(n => 
                     `<div class="option ${savedAns === n ? 'selected' : ''}" onclick="selectAns(${n})">${n}分 - ${['完全不同意', '不同意', '中立', '同意', '完全同意'][n-1]}</div>`
                 ).join('');
@@ -670,7 +670,9 @@
             const m4Dims = calcM4Dimensions();
             
             // 计算总分
-            const totalScore = currentTest.scores.m1 + currentTest.scores.m2 + currentTest.scores.m3 + Math.round(m4Dims.total / 96 * 30);
+            // 总分 = 模块1(20) + 模块2(20) + 模块3(15) + 模块4(按100分制折算)
+            const m4Normalized = Math.min(Math.round(m4Dims.total / 160 * 45), 45); // 模块4最高45分
+            const totalScore = currentTest.scores.m1 + currentTest.scores.m2 + currentTest.scores.m3 + m4Normalized;
             
             // 评级
             let level, levelText;
@@ -724,15 +726,22 @@
             
             questionBanks.m4.forEach((q, i) => {
                 const ans = currentTest.answers.m4[i] || 3;
-                const score = q.rev ? (6 - ans) : ans;
-                dims[q.dim] = (dims[q.dim] || 0) + score;
+                // 计算原始得分（1-5分）
+                const rawScore = q.rev ? (6 - ans) : ans;
+                dims[q.dim] = (dims[q.dim] || 0) + rawScore;
                 counts[q.dim] = (counts[q.dim] || 0) + 1;
             });
             
+            // 计算各维度平均分（1-5分制）
+            let totalScore = 0;
             for (let d in dims) {
-                dims[d] = counts[d] ? (dims[d] / counts[d] * 20).toFixed(1) : 0;
+                if (counts[d]) {
+                    const avgScore = dims[d] / counts[d]; // 1-5分
+                    dims[d] = avgScore.toFixed(1);
+                    totalScore += avgScore * 4; // 转换为满分20分，8个维度共160分
+                }
             }
-            dims.total = currentTest.scores.m4;
+            dims.total = Math.round(totalScore); // 总分约24-160分
             
             return dims;
         }
