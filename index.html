@@ -452,16 +452,38 @@
                  { q: '价格突破布林带中轨向上，意味着什么？', options: ['趋势转强', '趋势转弱', '震荡加剧', '无意义'], correct: 0, score: 5, type: '指标运用' }]
             ],
             m4: [
+                // 风险偏好 (4题)
                 { q: '面对不确定的市场，我更愿意选择稳健的策略', dim: '风险偏好', rev: true },
                 { q: '我可以接受短期内出现较大的资金回撤', dim: '风险偏好', rev: false },
-                { q: '面对亏损，我能够保持冷静，不会情绪化决策', dim: '情绪恢复', rev: false },
-                { q: '做交易决策前，我习惯先收集和分析数据', dim: '分析倾向', rev: false },
+                { q: '高风险高回报的投资比稳健投资更吸引我', dim: '风险偏好', rev: false },
+                { q: '我愿意把大部分资金投入到高风险项目中', dim: '风险偏好', rev: false },
+                // 时间偏好 (2题)
                 { q: '我更喜欢做长期规划而非短期投机', dim: '时间偏好', rev: false },
-                { q: '遇到复杂问题，我会花时间深入理解', dim: '学习速度', rev: false },
-                { q: '连续亏损后，我能快速调整状态重新开始', dim: '情绪恢复', rev: false },
+                { q: '我倾向于立即获得收益，而不是等待更大的未来回报', dim: '时间偏好', rev: true },
+                // 分析倾向 (4题)
+                { q: '做交易决策前，我习惯先收集和分析数据', dim: '分析倾向', rev: false },
                 { q: '我倾向于相信自己的分析而非他人建议', dim: '分析倾向', rev: false },
-                { q: '我认为运气在交易中起重要作用', dim: '非理性认知', rev: true },
-                { q: '输了就继续下注直到赢回来', dim: '矛盾检测1', rev: true }
+                { q: '我喜欢研究市场规律和价格走势', dim: '分析倾向', rev: false },
+                { q: '我会记录和分析自己的交易记录', dim: '分析倾向', rev: false },
+                // 学习速度 (4题)
+                { q: '遇到复杂问题，我会花时间深入理解', dim: '学习速度', rev: false },
+                { q: '我能快速掌握新的交易工具和策略', dim: '学习速度', rev: false },
+                { q: '我善于从失败中总结经验教训', dim: '学习速度', rev: false },
+                { q: '我经常主动学习新的金融知识', dim: '学习速度', rev: false },
+                // 情绪恢复 (4题)
+                { q: '面对亏损，我能够保持冷静，不会情绪化决策', dim: '情绪恢复', rev: false },
+                { q: '连续亏损后，我能快速调整状态重新开始', dim: '情绪恢复', rev: false },
+                { q: '市场波动不会影响我的睡眠质量', dim: '情绪恢复', rev: false },
+                { q: '我很少因为交易结果而焦虑或沮丧', dim: '情绪恢复', rev: false },
+                // 矛盾检测1 - 赌徒谬误 (2题)
+                { q: '输了就继续下注直到赢回来', dim: '矛盾检测1', rev: true },
+                { q: '连续亏损后，下一笔交易赢的概率会更高', dim: '矛盾检测1', rev: true },
+                // 矛盾检测2 - 运气认知 (2题)
+                { q: '我认为运气在交易中起重要作用', dim: '矛盾检测2', rev: true },
+                { q: '我的交易结果主要取决于运气好坏', dim: '矛盾检测2', rev: true },
+                // 非理性认知 (2题)
+                { q: '我有特殊的直觉能预测市场走势', dim: '非理性认知', rev: true },
+                { q: '市场总会朝着我预期的方向发展', dim: '非理性认知', rev: true }
             ]
         };
 
@@ -658,12 +680,17 @@
             
             // 保存结果到云端
             const result = {
-                ...currentTest.candidate,
+                name: currentTest.candidate.name,
+                phone: currentTest.candidate.phone,
+                school: currentTest.candidate.school,
+                major: currentTest.candidate.major,
                 scores: currentTest.scores,
-                m4Dimensions: m4Dims,
-                totalScore,
-                level,
-                levelText,
+                m4_dimensions: m4Dims,
+                total_score: totalScore,
+                level: level,
+                level_text: levelText,
+                question_bank: currentTest.questionBank,
+                answers: currentTest.answers,
                 time: new Date().toISOString()
             };
             
